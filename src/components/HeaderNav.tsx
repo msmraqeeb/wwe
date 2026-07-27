@@ -13,7 +13,10 @@ import {
   RotateCcw,
   Download,
   Upload,
-  Plus
+  Plus,
+  Cloud,
+  Database,
+  RefreshCw
 } from 'lucide-react';
 
 interface HeaderNavProps {
@@ -24,6 +27,8 @@ interface HeaderNavProps {
   onExportJSON: () => void;
   onImportJSON: (e: React.ChangeEvent<HTMLInputElement>) => void;
   totalSuperstarsCount: number;
+  supabaseStatus?: 'idle' | 'saving' | 'synced' | 'error';
+  onSyncSupabase?: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
@@ -33,7 +38,9 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onClearAllData,
   onExportJSON,
   onImportJSON,
-  totalSuperstarsCount
+  totalSuperstarsCount,
+  supabaseStatus = 'synced',
+  onSyncSupabase
 }) => {
   const tabs: { id: TabPath; label: string; icon: React.ReactNode; colorClass: string; badge?: string }[] = [
     {
@@ -117,6 +124,26 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {onSyncSupabase && (
+            <button
+              onClick={onSyncSupabase}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-md border flex items-center gap-1.5 transition ${
+                supabaseStatus === 'saving'
+                  ? 'bg-amber-950/60 border-amber-500/50 text-amber-300'
+                  : supabaseStatus === 'error'
+                  ? 'bg-red-950/60 border-red-500/50 text-red-300'
+                  : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
+              }`}
+              title="Supabase Cloud Database connected. Click to manual sync."
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span>
+                {supabaseStatus === 'saving' ? 'Syncing...' : supabaseStatus === 'error' ? 'Supabase Error' : 'Supabase Active'}
+              </span>
+              <RefreshCw className={`w-3 h-3 text-emerald-400 ${supabaseStatus === 'saving' ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+
           {totalSuperstarsCount === 0 && (
             <button
               onClick={onLoadSampleData}

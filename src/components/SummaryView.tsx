@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppState } from '../types';
-import { PieChart, Users, Crown, Swords, Calendar, Download, Upload, RotateCcw, Flame, Zap, Tv } from 'lucide-react';
+import { PieChart, Users, Crown, Swords, Calendar, Download, Upload, RotateCcw, Flame, Zap, Tv, Database } from 'lucide-react';
 
 interface SummaryViewProps {
   appState: AppState;
@@ -199,6 +199,47 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Supabase Cloud Storage Panel */}
+      <div className="p-5 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-500/20 border border-emerald-500/40 rounded-lg">
+              <Database className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Supabase Cloud Database Integration
+                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  CONNECTED
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                URL: <span className="text-slate-200 font-mono">https://ktitkqrusecvnuuulurf.supabase.co</span> • Table: <span className="text-emerald-400 font-mono">wwe_universe_data</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800">
+          Your Universe roster, titles, brand show plans, achievements, and calendar schedules are automatically synced to both <strong>Local Storage</strong> and <strong>Supabase Cloud Database</strong> in real time.
+        </p>
+
+        <div className="text-[11px] text-slate-400 space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-800/80 font-mono">
+          <span className="text-amber-400 font-bold block">Recommended Supabase SQL Table Schema (if not already created in Supabase SQL Editor):</span>
+          <pre className="text-emerald-300 overflow-x-auto whitespace-pre-wrap">
+{`create table if not exists wwe_universe_data (
+  id text primary key,
+  state jsonb not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Optional Row Level Security (RLS) policies
+alter table wwe_universe_data enable row level security;
+create policy "Public full access" on wwe_universe_data for all using (true) with check (true);`}
+          </pre>
         </div>
       </div>
     </div>

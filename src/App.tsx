@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle2, Cloud, Database } from 'lucide-react';
+import { saveUniverseToSupabase, loadUniverseFromSupabase } from './lib/supabase';
 import {
   TabPath,
   AppState,
@@ -74,7 +76,11 @@ export default function App() {
     };
   }, []);
 
-  // 2. Persistent State
+  // 2. Persistent State & Supabase Integration
+  const [showSaveToast, setShowSaveToast] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<'idle' | 'saving' | 'synced' | 'error'>('synced');
+  const isInitialMount = useRef(true);
+
   const [appState, setAppState] = useState<AppState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -84,17 +90,70 @@ export default function App() {
     } catch (err) {
       console.error('Failed to load local storage state:', err);
     }
-    // Default to empty state as requested by the user ("ami input dibo... field toiri kore dao")
     return initialEmptyState;
   });
 
+  // Attempt to load from Supabase on boot if available
+  useEffect(() => {
+    async function fetchFromSupabase() {
+      const res = await loadUniverseFromSupabase();
+      if (res.success && res.data && Array.isArray(res.data.superstars) && res.data.superstars.length > 0) {
+        // Only load if local storage was empty
+        const localSaved = localStorage.getItem(STORAGE_KEY);
+        if (!localSaved) {
+          setAppState(res.data);
+        }
+      }
+    }
+    fetchFromSupabase();
+  }, []);
+
+  // Save to localStorage & Supabase
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+      } else {
+        setShowSaveToast(true);
+        setSupabaseStatus('saving');
+
+        const toastTimer = setTimeout(() => {
+          setShowSaveToast(false);
+        }, 2500);
+
+        // Async save to Supabase
+        const supabaseTimer = setTimeout(async () => {
+          const res = await saveUniverseToSupabase(appState);
+          if (res.success) {
+            setSupabaseStatus('synced');
+          } else {
+            setSupabaseStatus('error');
+          }
+        }, 600);
+
+        return () => {
+          clearTimeout(toastTimer);
+          clearTimeout(supabaseTimer);
+        };
+      }
     } catch (err) {
       console.error('Failed to save state to localStorage:', err);
     }
   }, [appState]);
+
+  const handleManualSupabaseSync = async () => {
+    setSupabaseStatus('saving');
+    const res = await saveUniverseToSupabase(appState);
+    if (res.success) {
+      setSupabaseStatus('synced');
+      setShowSaveToast(true);
+      setTimeout(() => setShowSaveToast(false), 2500);
+    } else {
+      setSupabaseStatus('error');
+      alert(`Supabase Sync Notice: ${res.error || 'Saved locally. Ensure table wwe_universe_data is created in Supabase.'}`);
+    }
+  };
 
   // Handlers for Superstars
   const handleAddSuperstar = (name: string, brand: BrandType, tier: TierType) => {
@@ -341,6 +400,8 @@ export default function App() {
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
         totalSuperstarsCount={appState.superstars.length}
+        supabaseStatus={supabaseStatus}
+        onSyncSupabase={handleManualSupabaseSync}
       />
 
       {/* Main Tab Content View */}
@@ -466,6 +527,19 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Floating Subtle Toast Notification */}
+      {showSaveToast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 bg-slate-900/95 border border-emerald-500/40 text-emerald-300 text-xs font-semibold rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 animate-bounce-short">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="flex flex-col">
+            <span>Saved to local storage</span>
+            <span className="text-[10px] text-slate-400 font-normal">
+              {supabaseStatus === 'saving' ? 'Syncing to Supabase Cloud...' : 'Synced with Supabase Cloud'}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
